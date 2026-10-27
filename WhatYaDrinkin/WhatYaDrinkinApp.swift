@@ -15,6 +15,6 @@ struct WhatYaDrinkinApp: App {
             MainView()
                 .environment(MainVM())
         }
-        .modelContainer(for: [StoredBeverage.self, SyncVersion.self, ConsumedBeverage.self, GalleryImage.self, BeverageContainer.self])
+        .modelContainer(for: [StoredBeverage.self, SyncVersion.self, ConsumedBeverage.self, GalleryImage.self, BeverageContainer.self, ServingSizes.self])
     }
 }

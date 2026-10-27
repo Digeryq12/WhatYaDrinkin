@@ -20,6 +20,14 @@ enum BeverageCategory: String, Codable, CaseIterable {
     case dairy_blended = "dairy_blended"
 }
 
+typealias ServingSize = Float // maintain the original purpose of the enum
+
+@Model final class ServingSizes {
+    var all: [ServingSize] = [100, 250, 500, 750, 1000]
+    
+    init() {}
+}
+
 @Model final class BeverageContainer {
     @Attribute(.unique) var id = UUID()
     @Attribute(.externalStorage) var image: Data

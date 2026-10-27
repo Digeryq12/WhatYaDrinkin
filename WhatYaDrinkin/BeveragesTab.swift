@@ -16,14 +16,6 @@ enum BeverageMenuTab {
     case log
 }
 
-enum ServingSize: Float, Codable, CaseIterable {
-    case extraSmall = 100
-    case small = 250
-    case medium = 500
-    case large = 750
-    case extraLarge = 1000
-}
-
 struct BeveragesTab: View {
     @Environment(MainVM.self) var mainVM
     @Environment(BeveragesVM.self) var vm
@@ -33,6 +25,7 @@ struct BeveragesTab: View {
     @Query var storedBeverages: [StoredBeverage]
     @Query(sort: \ConsumedBeverage.consumptionTime, order: .reverse) var consumedBeverages: [ConsumedBeverage]
     @Query var beverageContainers: [BeverageContainer]
+    @Query var servingSizes: [ServingSizes]
     
     @State private var capturedImage: UIImage?
     @State private var cameraOpen = false
@@ -59,19 +52,19 @@ struct BeveragesTab: View {
     
     private var intakeToday: Float {
         var intake: Float = 0
-        consumedBeverages.forEach { intake += $0.serving.rawValue / 100 }
+        consumedBeverages.forEach { intake += $0.serving / 100 }
         return intake
     }
     
     private var caloriesToday: Float {
         var calories: Float = 0
-        consumedBeverages.forEach { calories += $0.calories * ($0.serving.rawValue / 100) }
+        consumedBeverages.forEach { calories += $0.calories * ($0.serving / 100) }
         return calories
     }
     
     private var sugarToday: Float {
         var sugar: Float = 0
-        consumedBeverages.forEach { sugar += $0.sugar * ($0.serving.rawValue / 100) }
+        consumedBeverages.forEach { sugar += $0.sugar * ($0.serving / 100) }
         return sugar
     }
     
@@ -108,10 +101,10 @@ struct BeveragesTab: View {
     }
     
     private var servingSizeLabel: (ServingSize) -> (String) {
-        { serving in
+        { servingSize in
             let serving = limitDecimals(
                 to: 2,
-                on: serving.rawValue / 100 * mainVM.selectedSystem.volume.c
+                on: servingSize / 100 * mainVM.selectedSystem.volume.c
             )
             
             let measurement = mainVM.selectedSystem.volume.n
@@ -121,9 +114,9 @@ struct BeveragesTab: View {
     }
     
     private var propertiesLabel: String {
-        let calories = limitDecimals(to: 1, on: vm.selectedBeverage.calories * (vm.currentServing.rawValue / 100) * mainVM.selectedSystem.volume.c)
+        let calories = limitDecimals(to: 1, on: vm.selectedBeverage.calories * (vm.currentServing / 100) * mainVM.selectedSystem.volume.c)
         
-        let sugar = limitDecimals(to: 2, on: vm.selectedBeverage.sugar * (vm.currentServing.rawValue / 100)  * mainVM.selectedSystem.volume.c)
+        let sugar = limitDecimals(to: 2, on: vm.selectedBeverage.sugar * (vm.currentServing / 100)  * mainVM.selectedSystem.volume.c)
         
         return "\(calories)kcal + \(sugar)\(mainVM.selectedSystem.mass.n) of sugar"
     }
@@ -407,7 +400,7 @@ struct BeveragesTab: View {
                                     
                                     ScrollView(.horizontal) {
                                         HStack {
-                                            ForEach(ServingSize.allCases, id: \.self) { serving in
+                                            ForEach(servingSizes.first?.all ?? ServingSizes().all, id: \.self) { serving in
                                                 Button {
                                                     vm.currentServing = serving
                                                 } label: {
@@ -628,8 +621,8 @@ struct BeveragesTab: View {
             
             vm.checkConsumedBeverages(modelContext: modelContext, consumedBeverages: consumedBeverages)
             
-            for sb in storedBeverages {
-                print(sb.name, sb.userCreated)
+            if servingSizes.first == nil {
+                modelContext.insert(ServingSizes())
             }
         }
     }

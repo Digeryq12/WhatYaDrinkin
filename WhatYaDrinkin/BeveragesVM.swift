@@ -15,7 +15,7 @@ import SwiftUI
     var beverageMenuOpen = false
     var selectedBeverage = StoredBeverage(id: UUID(), name: "Unknown beverage", category: .water, icon: Data(), calories: 0, sugar: 0.0, userCreated: false) // only defined here so that the textfield bindings for calories and sugar work
     
-    var currentServing: ServingSize = .extraSmall
+    var currentServing: ServingSize = 100
     var editingBeverageProperties = false
     
     var customBeverage = StoredBeverage(id: UUID(), name: "My beverage", category: .water, icon: Data(), calories: 0, sugar: 0.0, userCreated: true)
