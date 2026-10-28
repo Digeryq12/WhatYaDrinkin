@@ -46,8 +46,52 @@ struct BeveragesTab: View {
             // ONLY actually changed and not just displayed in a different measurement system since it can be changed by the user!
             // xg/1dl to y(oz/fl oz)
             vm.selectedBeverage.calories /= mainVM.selectedSystem.volume.c
+            vm.addingServingSize = false
+            vm.customServingSize = 0
             mainVM.currentMenuTab = .log
         }
+    }
+    
+    private func saveConsumedBeverage() {
+        let convertedSugar = (vm.selectedBeverage.sugar / mainVM.selectedSystem.mass.c) * mainVM.selectedSystem.volume.c
+        let convertedCalories = vm.selectedBeverage.calories * mainVM.selectedSystem.volume.c
+        
+        modelContext.insert(ConsumedBeverage(beverageId: vm.selectedBeverage.id, calories: convertedCalories, sugar: convertedSugar, serving: vm.currentServing, consumptionTime: Date.now))
+        
+        if let codedImage = capturedImage?.pngData() {
+            modelContext.insert(GalleryImage(image: codedImage, beverageId: vm.selectedBeverage.id, captureTime: Date.now))
+        }
+        
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save")
+        }
+        
+        mainVM.currentMenuTab = .selector
+        capturedImage = nil
+    }
+    
+    private func addCustomServingSize() {
+        vm.addingServingSize = false
+        let serving = vm.customServingSize / mainVM.selectedSystem.volume.c * 100
+        if let ss = servingSizes.first?.all {
+            if !ss.contains(serving) { // id is set to self, meaning each size has to be unique
+                servingSizes.first?.all.insert(serving)
+            }
+        }
+        vm.customServingSize = 0
+        print(servingSizes.first!.all)
+    }
+    
+    private func createCustomBeverage() {
+        vm.customBeverage = StoredBeverage(id: UUID(), name: "My beverage", category: .water, icon: Data(), calories: 0, sugar: 0.0, userCreated: true)
+        
+        if let random = beverageContainers.randomElement()?.image {
+            vm.customBeverage.icon = random
+        }
+        
+        mainVM.currentMenuTab = .new
     }
     
     private var intakeToday: Float {
@@ -119,6 +163,17 @@ struct BeveragesTab: View {
         let sugar = limitDecimals(to: 2, on: vm.selectedBeverage.sugar * (vm.currentServing / 100)  * mainVM.selectedSystem.volume.c)
         
         return "\(calories)kcal + \(sugar)\(mainVM.selectedSystem.mass.n) of sugar"
+    }
+    
+    // https://claude.ai/share/5023e84b-a5f1-4aab-b11b-298d6cb2f5e2
+    private var availableServingSizes: Set<ServingSize> {
+        servingSizes.first?.all ?? ServingSizes().all
+    }
+    
+    private var servingTint: (ServingSize) -> (Color) {
+        { serving in
+            return serving == vm.currentServing ? .blue : .gray
+        }
     }
     
     private var currentTopBar: String {
@@ -256,6 +311,7 @@ struct BeveragesTab: View {
                             
                             Button {
                                 vm.beverageMenuOpen = false
+                                mainVM.currentMenuTab = .selector // measurement system picker locks otherwise
                                 capturedImage = nil
                                 selectedBeverages = []
                             } label: {
@@ -308,13 +364,7 @@ struct BeveragesTab: View {
                                     }
                                     
                                     Button {
-                                        vm.customBeverage = StoredBeverage(id: UUID(), name: "My beverage", category: .water, icon: Data(), calories: 0, sugar: 0.0, userCreated: true)
-                                        
-                                        if let random = beverageContainers.randomElement()?.image {
-                                            vm.customBeverage.icon = random
-                                        }
-                                        
-                                        mainVM.currentMenuTab = .new
+                                        createCustomBeverage()
                                     } label: {
                                         Label("Create beverage", systemImage: "plus.app.fill")
                                             .imageScale(.large)
@@ -400,23 +450,52 @@ struct BeveragesTab: View {
                                     
                                     ScrollView(.horizontal) {
                                         HStack {
-                                            ForEach(servingSizes.first?.all ?? ServingSizes().all, id: \.self) { serving in
+                                            ForEach(Array(availableServingSizes).sorted(), id: \.self) { serving in
                                                 Button {
                                                     vm.currentServing = serving
                                                 } label: {
                                                     Text(servingSizeLabel(serving))
+                                                        .onLongPressGesture {
+                                                            if !ServingSizes().all.contains(serving) { // also makes sure we are removing from the model
+                                                                servingSizes.first?.all.remove(serving)
+                                                            }
+                                                        }
                                                 }
                                                 .buttonStyle(.bordered)
-                                                .tint(serving == vm.currentServing ? .blue : .gray)
+                                                .tint(servingTint(serving))
                                             }
                                             
-                                            Button {
-                                                
-                                            } label: {
-                                                Text("+")
+                                            if !vm.addingServingSize {
+                                                Button {
+                                                    vm.addingServingSize = true
+                                                } label: {
+                                                    Text("+")
+                                                }
+                                                .buttonStyle(.bordered)
+                                                .tint(.gray)
+                                            } else {
+                                                ZStack {
+                                                    RoundedRectangle(cornerRadius: 20)
+                                                        .frame(width: 70, height: 35)
+                                                        .foregroundStyle(.gray.opacity(0.22))
+                                                    
+                                                    HStack {
+                                                        TextField(mainVM.selectedSystem.volume.n, value: $vm.customServingSize, format: .number)
+                                                            .keyboardType(.decimalPad)
+                                                            .frame(width: 30, height: 30)
+                                                            .foregroundStyle(.gray)
+                                                        //.glassEffect()
+                                                        
+                                                        Button {
+                                                            addCustomServingSize()
+                                                        } label: {
+                                                            Image(systemName: "checkmark")
+                                                        }
+                                                        //.buttonStyle(.bordered)
+                                                        //.tint(.blue)
+                                                    }
+                                                }
                                             }
-                                            .buttonStyle(.bordered)
-                                            .tint(.gray)
                                         }
                                     }
                                 }
@@ -467,20 +546,7 @@ struct BeveragesTab: View {
                                     Spacer()
                                     
                                     Button {
-                                        modelContext.insert(ConsumedBeverage(beverageId: vm.selectedBeverage.id, calories: vm.selectedBeverage.calories * mainVM.selectedSystem.volume.c, sugar: (vm.selectedBeverage.sugar / mainVM.selectedSystem.mass.c) * mainVM.selectedSystem.volume.c, serving: vm.currentServing, consumptionTime: Date.now))
-                                        
-                                        if let codedImage = capturedImage?.pngData() {
-                                            modelContext.insert(GalleryImage(image: codedImage, beverageId: vm.selectedBeverage.id, captureTime: Date.now))
-                                        }
-                                        
-                                        do {
-                                            try modelContext.save()
-                                        } catch {
-                                            print("Failed to save")
-                                        }
-                                        
-                                        mainVM.currentMenuTab = .selector
-                                        capturedImage = nil
+                                        saveConsumedBeverage()
                                         
                                     } label: {
                                         Text("Confirm")

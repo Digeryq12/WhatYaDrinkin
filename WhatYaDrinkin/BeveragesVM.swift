@@ -17,8 +17,10 @@ import SwiftUI
     
     var currentServing: ServingSize = 100
     var editingBeverageProperties = false
+    var addingServingSize = false
     
     var customBeverage = StoredBeverage(id: UUID(), name: "My beverage", category: .water, icon: Data(), calories: 0, sugar: 0.0, userCreated: true)
+    var customServingSize: ServingSize = 0
     
     var showingContainers = false
     

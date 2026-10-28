@@ -23,7 +23,7 @@ enum BeverageCategory: String, Codable, CaseIterable {
 typealias ServingSize = Float // maintain the original purpose of the enum
 
 @Model final class ServingSizes {
-    var all: [ServingSize] = [100, 250, 500, 750, 1000]
+    var all: Set<ServingSize> = [100, 250, 500, 750, 1000]
     
     init() {}
 }
