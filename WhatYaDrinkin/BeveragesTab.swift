@@ -16,6 +16,16 @@ enum BeverageMenuTab {
     case log
 }
 
+enum BTField {
+    case consumedBeverageSugar
+    case consumedBeverageCalories
+    case customServingSize
+    
+    case customBeverageName
+    case customBeverageSugar
+    case customBeverageCalories
+}
+
 struct BeveragesTab: View {
     @Environment(MainVM.self) var mainVM
     @Environment(BeveragesVM.self) var vm
@@ -29,6 +39,7 @@ struct BeveragesTab: View {
     
     @State private var capturedImage: UIImage?
     @State private var cameraOpen = false
+    @FocusState private var focusedField: BTField?
     
     private func filteredBeverages(by category: BeverageCategory) -> [StoredBeverage] {
         return storedBeverages.filter { $0.category == category }
@@ -413,6 +424,7 @@ struct BeveragesTab: View {
                                     if vm.editingBeverageProperties {
                                         TextField("kcal", value: $vm.selectedBeverage.calories, format: .number)
                                             .keyboardType(.decimalPad)
+                                            .focused($focusedField, equals: .consumedBeverageCalories)
                                             .frame(width: 40, height: 30)
                                             .glassEffect()
                                         
@@ -426,6 +438,7 @@ struct BeveragesTab: View {
                                         
                                         TextField(mainVM.selectedSystem.mass.n, value: $vm.selectedBeverage.sugar, format: .number)
                                             .keyboardType(.decimalPad)
+                                            .focused($focusedField, equals: .consumedBeverageSugar)
                                             .frame(width: 40, height: 30)
                                             .glassEffect()
                                         
@@ -482,6 +495,7 @@ struct BeveragesTab: View {
                                                     HStack {
                                                         TextField(mainVM.selectedSystem.volume.n, value: $vm.customServingSize, format: .number)
                                                             .keyboardType(.decimalPad)
+                                                            .focused($focusedField, equals: .customServingSize)
                                                             .frame(width: 30, height: 30)
                                                             .foregroundStyle(.gray)
                                                         //.glassEffect()
@@ -585,6 +599,8 @@ struct BeveragesTab: View {
                                     
                                     VStack(alignment: .leading) {
                                         TextField("Beverage name", text: $vm.customBeverage.name)
+                                            .autocorrectionDisabled()
+                                            .focused($focusedField, equals: .customBeverageName)
                                             .frame(width: 150, height: 30)
                                             .padding(.horizontal, 10)
                                             .glassEffect()
@@ -624,6 +640,7 @@ struct BeveragesTab: View {
                                     // https://developer.apple.com/documentation/swiftui/textfield/init(_:value:format:prompt:)
                                     TextField("kcal", value: $vm.customBeverage.calories, format: .number)
                                         .keyboardType(.decimalPad)
+                                        .focused($focusedField, equals: .customBeverageCalories)
                                         .frame(width: 50, height: 30)
                                         .padding(.horizontal, 10)
                                         .glassEffect()
@@ -634,6 +651,7 @@ struct BeveragesTab: View {
                                     
                                     TextField(mainVM.selectedSystem.mass.n, value: $vm.customBeverage.sugar, format: .number)
                                         .keyboardType(.decimalPad)
+                                        .focused($focusedField, equals: .customBeverageSugar)
                                         .frame(width: 50, height: 30)
                                         .padding(.horizontal, 10)
                                         .glassEffect()
@@ -679,6 +697,11 @@ struct BeveragesTab: View {
                 .padding(.horizontal, 20)
             }
         }
+        .modifier(KeyboardReturnMod(
+            offset: -24,
+            keyboardOpen: focusedField != nil,
+            returnAction: { focusedField = nil })
+        )
         .sheet(isPresented: $cameraOpen) {
             CameraView(image: $capturedImage)
         }
