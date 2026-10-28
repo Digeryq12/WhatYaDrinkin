@@ -16,6 +16,7 @@ struct GalleryTab: View {
     @Query var storedBeverages: [StoredBeverage]
     
     @State private var selectedImages = Set<GalleryImage>()
+    @State private var previewedImage: GalleryImage?
     
     var body: some View {
         if galleryImages.isEmpty {
@@ -54,7 +55,12 @@ struct GalleryTab: View {
                                             .aspectRatio(contentMode: .fit)
                                             .frame(width: 100, height: 100)
                                             .padding(.bottom, 10)
-                                            .modifier(SelectableMod(selectedItems: $selectedImages, currentItem: image, offset: (x: 0, y: 0), interactable: { true }))
+                                            .modifier(SelectableMod(selectedItems: $selectedImages, currentItem: image, offset: (x: 0, y: 0), interactable: { previewedImage == nil }))
+                                            .onTapGesture {
+                                                if selectedImages.isEmpty && previewedImage == nil {
+                                                    previewedImage = image
+                                                }
+                                            }
                                         
                                         Text(image.captureTime.formatted(date: .omitted, time: .shortened))
                                             .font(.title3)
@@ -80,6 +86,18 @@ struct GalleryTab: View {
                             DeleteSelectionButton(selectedItems: $selectedImages, modelContext: modelContext)
                         }
                     }
+                }
+                .blur(radius: previewedImage != nil ? 1 : 0)
+                .overlay {
+                    if let image = UIImage(data: previewedImage?.image ?? Data()) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 350, height: 350)
+                    }
+                }
+                .onTapGesture {
+                    previewedImage = nil
                 }
                 .padding()
             }

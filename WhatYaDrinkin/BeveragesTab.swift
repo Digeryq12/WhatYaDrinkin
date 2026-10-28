@@ -507,8 +507,8 @@ struct BeveragesTab: View {
                                         Image(uiImage: capturedImage)
                                             .resizable()
                                             .aspectRatio(contentMode: .fill)
-                                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                                            .frame(width: 60)
+                                            .frame(width: 85, height: 85)
+                                            .clipShape(RoundedRectangle(cornerRadius: 15))
                                             .padding(.trailing, 10)
                                             .onTapGesture {
                                                 cameraOpen = true
